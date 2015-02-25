@@ -85,6 +85,7 @@ class Blog_Categories_Plugin {
         add_screen_option( 'per_page', array( 'label' => __('Count'), 'default' => 20, 'option' => 'edit_blog_cats_per_page' ) );
 
         $location = false;
+        $title = __('Add New Category');
 
         $cat_list = new Blog_Cat_List_Table(array(
             'cat_table' => $this->cat_table_name,
@@ -93,9 +94,9 @@ class Blog_Categories_Plugin {
 
         switch ( $cat_list->current_action() ) {
 
-            case 'add-tag':
+            case 'add':
 
-                check_admin_referer('add-blog-cat', '_wpnonce_add-blog-cat');
+                check_admin_referer('blog-cat', '_wpnonce_blog-cat');
 
                 if (!current_user_can('manage_sites'))
                     wp_die(__('Cheatin&#8217; uh?'), 403);
@@ -145,6 +146,16 @@ class Blog_Categories_Plugin {
                 $location = add_query_arg( 'message', 6, $location );
 
                 break;
+
+            case 'edit':
+
+                $title = __('Edit category');
+
+                $cat_ID = (int) $_REQUEST['cat_id'];
+
+                $cat = $this->get_blog_cat( $cat_ID );
+                if ( ! $cat )
+                    wp_die( __( 'You attempted to edit an item that doesn&#8217;t exist. Perhaps it was deleted?' ) );
         }
 
         if ( ! $location && ! empty( $_REQUEST['_wp_http_referer'] ) ) {
@@ -191,7 +202,7 @@ class Blog_Categories_Plugin {
 
                 <div id="col-right">
                     <div class="col-wrap">
-                        <form id="events-filter" method="get">
+                        <form id="blog-cat-bulk-actions" method="get">
                             <?php wp_nonce_field('bulk-blog-cat', '_wpnonce_bulk-blog-cat'); ?>
                             <input type="hidden" name="page" value="<?php echo $_REQUEST['page'] ?>" />
                             <?php $cat_list->display(); ?>
@@ -204,16 +215,16 @@ class Blog_Categories_Plugin {
                 <div id="col-left">
                     <div class="col-wrap">
                         <div class="form-wrap">
-                            <h3><?php _e('Add new category') ?></h3>
-                            <form id="addblogcat" method="post" action="" class="validate">
-                                <input type="hidden" name="action" value="add-tag" />
-                                <?php wp_nonce_field('add-blog-cat', '_wpnonce_add-blog-cat'); ?>
+                            <h3><?php echo $title ?></h3>
+                            <form id="blog-cat" method="post" action="" class="validate">
+                                <input type="hidden" name="action" value="<?php echo $cat ? 'edited' : 'add' ?>" />
+                                <?php wp_nonce_field('blog-cat', '_wpnonce_blog-cat'); ?>
                                 <div class="form-field form-required term-name-wrap">
                                     <label for="blog-cat-name"><?php _ex( 'Name', 'term name' ); ?></label>
-                                    <input name="blog-cat-name" id="blog-cat-name" type="text" value="" size="40" aria-required="true" />
+                                    <input name="blog-cat-name" id="blog-cat-name" type="text" value="<?php echo $cat ? $cat->cat_name : '' ?>" size="40" aria-required="true" />
                                 </div>
 
-                                <?php submit_button( __('Add new category') ); ?>
+                                <?php submit_button( $cat ? __('Update') : __('Add New Category') ); ?>
                             </form>
                         </div>
                     </div>
@@ -302,6 +313,12 @@ class Blog_Categories_Plugin {
         global $wpdb;
         $sql = "DELETE FROM {$this->cat_table_name} WHERE cat_id = $cat_ID";
         return $wpdb->query( $sql );
+    }
+
+    private function get_blog_cat($cat_ID) {
+        global $wpdb;
+        $sql = "SELECT * FROM {$this->cat_table_name} WHERE cat_id = $cat_ID";
+        return $wpdb->get_row( $sql );
     }
 
     function update_blogs() {
