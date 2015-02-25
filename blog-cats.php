@@ -76,7 +76,7 @@ class Blog_Categories_Plugin {
         $capability = 'manage_sites';
         $menu_slug = 'blog-cats-menu';
         $function = array($this, 'blog_cats_list');
-        add_menu_page( $page_title, $menu_title, $capability, $menu_slug, $function, 'dashicons-category', 5 );
+        add_menu_page( $page_title, $menu_title, $capability, $menu_slug, $function, 'dashicons-category' );
     }
 
     public function blog_cats_list() {
@@ -95,19 +95,54 @@ class Blog_Categories_Plugin {
 
             case 'add-tag':
 
-                check_admin_referer('add-blog-tag', '_wpnonce_add-blog-tag');
+                check_admin_referer('add-blog-cat', '_wpnonce_add-blog-cat');
 
                 if (!current_user_can('manage_sites'))
                     wp_die(__('Cheatin&#8217; uh?'), 403);
 
                 $ret = $this->add_blog_cat($_POST['blog-cat-name']);
 
-                $location = 'admin.php?page=blog-cats-menu';
+                $location = 'admin.php?page='.$_REQUEST['page'];
 
                 if ($ret && !is_wp_error($ret))
                     $location = add_query_arg('message', 1, $location);
                 else
                     $location = add_query_arg('message', 4, $location);
+
+                break;
+
+            case 'delete':
+
+                if (!current_user_can('manage_sites'))
+                    wp_die(__('Cheatin&#8217; uh?'), 403);
+
+                if ( ! isset( $_REQUEST['cat_id'] ) ) {
+                    break;
+                }
+
+                $this->delete_blog_cat( $_REQUEST['cat_id'] );
+
+                $location = 'admin.php?page='.$_REQUEST['page'];
+
+                $location = add_query_arg( 'message', 2, $location );
+
+                break;
+
+            case 'bulk-delete':
+
+                check_admin_referer('bulk-blog-cat', '_wpnonce_bulk-blog-cat');
+
+                if (!current_user_can('manage_sites'))
+                    wp_die(__('Cheatin&#8217; uh?'), 403);
+
+                $tags = (array) $_REQUEST['delete_cats'];
+                foreach ( $tags as $cat_ID ) {
+                    $this->delete_blog_cat( $cat_ID );
+                }
+
+                $location = 'admin.php?page='.$_REQUEST['page'];
+
+                $location = add_query_arg( 'message', 6, $location );
 
                 break;
         }
@@ -124,6 +159,27 @@ class Blog_Categories_Plugin {
             exit;
         }
 
+        $messages = array(
+            0 => '', // Unused. Messages start at index 1.
+            1 => __( 'Category added.' ),
+            2 => __( 'Category deleted.' ),
+            3 => __( 'Category updated.' ),
+            4 => __( 'Category not added.' ),
+            5 => __( 'Category not updated.' ),
+            6 => __( 'Categories deleted.' )
+        );
+
+        $message = false;
+        if ( isset( $_REQUEST['message'] ) && ( $msg = (int) $_REQUEST['message'] ) ) {
+            if ( isset( $messages[ $msg ] ) )
+                $message = $messages[ $msg ];
+        }
+
+        if ( $message ) : ?>
+            <div id="message" class="updated"><p><?php echo $message; ?></p></div>
+            <?php $_SERVER['REQUEST_URI'] = remove_query_arg(array('message'), $_SERVER['REQUEST_URI']);
+        endif;
+
         $cat_list->prepare_items();
 
                 ?>
@@ -135,8 +191,11 @@ class Blog_Categories_Plugin {
 
                 <div id="col-right">
                     <div class="col-wrap">
-
-                        <?php $cat_list->display(); ?>
+                        <form id="events-filter" method="get">
+                            <?php wp_nonce_field('bulk-blog-cat', '_wpnonce_bulk-blog-cat'); ?>
+                            <input type="hidden" name="page" value="<?php echo $_REQUEST['page'] ?>" />
+                            <?php $cat_list->display(); ?>
+                        </form>
 
                         <br class="clear" />
                     </div>
@@ -236,6 +295,12 @@ class Blog_Categories_Plugin {
     private function add_blog_cat($name) {
         global $wpdb;
         $sql = "INSERT INTO {$this->cat_table_name} (cat_name) VALUES (\"$name\")";
+        return $wpdb->query( $sql );
+    }
+
+    private function delete_blog_cat($cat_ID) {
+        global $wpdb;
+        $sql = "DELETE FROM {$this->cat_table_name} WHERE cat_id = $cat_ID";
         return $wpdb->query( $sql );
     }
 

@@ -23,78 +23,97 @@ class Blog_Cat_List_Table extends WP_List_Table {
 
     function get_columns(){
         $columns = array(
-            'col_cat_id' => __('ID'),
-            'col_cat_name' => __('Name'),
-            'col_cat_blog_count' => __('Count')
+            'cb' => '<input type="checkbox" />',
+            'cat_name' => __('Name'),
+            'cat_id' => __('ID'),
+            'blog_count' => __('Blog count')
         );
         return $columns;
     }
 
     public function get_sortable_columns() {
         return $sortable = array(
-            'col_cat_id'=>'cat_id',
-            'col_cat_name'=>'cat_name',
-            'col_cat_blog_count'=>'blog_count'
+            'cat_name' => array('cat_name', false),
+            'cat_id' => array('cat_id', false),
+            'blog_count' => array('blog_count', false)
         );
     }
 
     function prepare_items() {
-        global $wpdb, $_wp_column_headers;
-        $screen = get_current_screen();
+        global $wpdb;
 
-        /* -- Preparing your query -- */
-        $query = "SELECT `{$this->cat_table_name}`.`cat_id`, `{$this->cat_table_name}`.`cat_name`, COUNT(`{$this->cat_relations_table_name}`.`cat_id`) as blog_count
-                    FROM {$this->cat_table_name}
-                    LEFT JOIN {$this->cat_relations_table_name} ON `{$this->cat_table_name}`.`cat_id` = `{$this->cat_relations_table_name}`.`cat_id`
-                    GROUP BY `{$this->cat_table_name}`.`cat_id`, `{$this->cat_table_name}`.`cat_name`";
+        $total_items = $wpdb->get_var("SELECT COUNT(*) FROM {$this->cat_table_name}");
 
         /* -- Ordering parameters -- */
         //Parameters that are going to be used to order the result
-        $orderby = !empty($_GET["orderby"]) ? mysql_real_escape_string($_GET["orderby"]) : 'ASC';
-        $order = !empty($_GET["order"]) ? mysql_real_escape_string($_GET["order"]) : '';
-        if(!empty($orderby) & !empty($order)){ $query.=' ORDER BY '.$orderby.' '.$order; }
+        $sortable_columns = $this->get_sortable_columns();
+        $order_by = 'cat_id';
+        if(isset($_GET["orderby"]) && isset($sortable_columns[$_GET["orderby"]])) {
+            $order_by = $_GET["orderby"];
+        }
+
+        $order = isset($_GET["order"]) && $_GET["order"] == 'desc' ? 'desc' : 'asc';
 
         /* -- Pagination parameters -- */
-        //Number of elements in your table?
-        $totalitems = $wpdb->query($query); //return the total number of affected rows
         //How many to display per page?
-        $perpage = 20;
+        $per_page = 20;
+        $offset = 0;
+
         //Which page is this?
-        $paged = !empty($_GET["paged"]) ? mysql_real_escape_string($_GET["paged"]) : '';
+        $paged = !empty($_GET["paged"]) ? $_GET["paged"] : '';
         //Page Number
         if(empty($paged) || !is_numeric($paged) || $paged<=0 ){ $paged=1; }
         //How many pages do we have in total?
-        $totalpages = ceil($totalitems/$perpage);
+        $total_pages = ceil($total_items/$per_page);
         //adjust the query to take pagination into account
-        if(!empty($paged) && !empty($perpage)){
-            $offset=($paged-1)*$perpage;
-            $query.=' LIMIT '.(int)$offset.','.(int)$perpage;
+        if(!empty($paged) && !empty($per_page)){
+            $offset=($paged-1)*$per_page;
         }
+
+        /* -- Preparing your query -- */
+        $query = "SELECT `{$this->cat_table_name}`.`cat_id`, `{$this->cat_table_name}`.`cat_name`, COUNT(`{$this->cat_relations_table_name}`.`cat_id`) as blog_count
+                FROM {$this->cat_table_name}
+                LEFT JOIN {$this->cat_relations_table_name} ON `{$this->cat_table_name}`.`cat_id` = `{$this->cat_relations_table_name}`.`cat_id`
+                GROUP BY `{$this->cat_table_name}`.`cat_id`, `{$this->cat_table_name}`.`cat_name` ORDER BY $order_by $order LIMIT $offset,$per_page";
 
         /* -- Register the pagination -- */
         $this->set_pagination_args( array(
-            "total_items" => $totalitems,
-            "total_pages" => $totalpages,
-            "per_page" => $perpage,
+            "total_items" => $total_items,
+            "total_pages" => $total_pages,
+            "per_page" => $per_page,
         ) );
         //The pagination links are automatically built according to those parameters
 
         /* -- Register the Columns -- */
-        $columns = $this->get_columns();
-        $_wp_column_headers[$screen->id]=$columns;
+        $this->_column_headers = array($this->get_columns(), array(), $sortable_columns);
 
         /* -- Fetch the items -- */
         $this->items = $wpdb->get_results($query);
     }
 
     function column_default( $item, $column_name ) {
-        return $item[substr($column_name, 4)];
-        switch( $column_name ) {
-            case 'ID':
-            case 'name':
-                return $item[ $column_name ];
-            default:
-                return print_r( $item, true ) ; //Show the whole array for troubleshooting purposes
-        }
+        return $item->{$column_name};
+    }
+
+    function column_cat_name($item) {
+        $actions = array(
+            'edit'      => sprintf('<a href="?page=%s&action=%s&cat_id=%s">%s</a>',$_REQUEST['page'],'edit',$item->cat_id, __('Edit')),
+            'delete'    => sprintf('<a href="?page=%s&action=%s&cat_id=%s">%s</a>',$_REQUEST['page'],'delete',$item->cat_id, __('Delete')),
+        );
+
+        return sprintf('%1$s %2$s', $item->cat_name, $this->row_actions($actions) );
+    }
+
+    function column_cb($item) {
+        return sprintf(
+            '<input type="checkbox" name="delete_cats[]" value="%s" />', $item->cat_id
+        );
+    }
+
+    function get_bulk_actions() {
+        $actions = array(
+            'bulk-delete'    => 'Delete'
+        );
+        return $actions;
     }
 }
