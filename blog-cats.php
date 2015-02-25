@@ -156,6 +156,31 @@ class Blog_Categories_Plugin {
                 $cat = $this->get_blog_cat( $cat_ID );
                 if ( ! $cat )
                     wp_die( __( 'You attempted to edit an item that doesn&#8217;t exist. Perhaps it was deleted?' ) );
+
+                break;
+
+            case 'edited':
+
+                check_admin_referer('blog-cat', '_wpnonce_blog-cat');
+
+                if (!current_user_can('manage_sites'))
+                    wp_die(__('Cheatin&#8217; uh?'), 403);
+
+                $cat_ID = (int) $_POST['cat_id'];
+
+                $cat = $this->get_blog_cat( $cat_ID );
+                if ( ! $cat )
+                    wp_die( __( 'You attempted to edit an item that doesn&#8217;t exist. Perhaps it was deleted?' ) );
+
+                $ret = $this->update_blog_cat($cat_ID, $_POST['blog-cat-name']);
+
+                $location = 'admin.php?page='.$_REQUEST['page'];
+
+                if ( $ret && !is_wp_error( $ret ) )
+                    $location = add_query_arg( 'message', 3, $location );
+                else
+                    $location = add_query_arg( 'message', 5, $location );
+                break;
         }
 
         if ( ! $location && ! empty( $_REQUEST['_wp_http_referer'] ) ) {
@@ -218,6 +243,7 @@ class Blog_Categories_Plugin {
                             <h3><?php echo $title ?></h3>
                             <form id="blog-cat" method="post" action="" class="validate">
                                 <input type="hidden" name="action" value="<?php echo $cat ? 'edited' : 'add' ?>" />
+                                <input type="hidden" name="cat_id" value="<?php echo $cat ? $cat->cat_id : '' ?>" />
                                 <?php wp_nonce_field('blog-cat', '_wpnonce_blog-cat'); ?>
                                 <div class="form-field form-required term-name-wrap">
                                     <label for="blog-cat-name"><?php _ex( 'Name', 'term name' ); ?></label>
@@ -305,8 +331,8 @@ class Blog_Categories_Plugin {
      **/
     private function add_blog_cat($name) {
         global $wpdb;
-        $sql = "INSERT INTO {$this->cat_table_name} (cat_name) VALUES (\"$name\")";
-        return $wpdb->query( $sql );
+        $query = $wpdb->prepare("INSERT INTO {$this->cat_table_name} (cat_name) VALUES ( %s )", $name);
+        return $wpdb->query( $query );
     }
 
     private function delete_blog_cat($cat_ID) {
@@ -319,6 +345,12 @@ class Blog_Categories_Plugin {
         global $wpdb;
         $sql = "SELECT * FROM {$this->cat_table_name} WHERE cat_id = $cat_ID";
         return $wpdb->get_row( $sql );
+    }
+
+    private function update_blog_cat($cat_ID, $name) {
+        global $wpdb;
+        $query = $wpdb->prepare("UPDATE {$this->cat_table_name} SET cat_name = %s WHERE cat_id = %d", $name, $cat_ID);
+        return $wpdb->query( $query );
     }
 
     function update_blogs() {
