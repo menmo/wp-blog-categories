@@ -41,4 +41,16 @@ class Blog_Cat_Relationships {
 		return false;
 	}
 
+	public static function delete_all($cat_ID) {
+		global $wpdb;
+		$query = $wpdb->prepare("DELETE FROM " . Blog_Cat_Relationships::table_name() . " WHERE cat_id = %d", $cat_ID);
+		return $wpdb->query($query);
+	}
+
+	public static function get_blog_list( $cat_ID ) {
+		global $wpdb;
+		$query = $wpdb->prepare("SELECT blog_id FROM  " . Blog_Cat_Relationships::table_name() . " WHERE cat_id = %d", $cat_ID);
+		return $wpdb->get_col($query);
+	}
+
 }

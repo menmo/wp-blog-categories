@@ -18,7 +18,13 @@ switch ( $cat_list->current_action() ) {
 		if (!current_user_can('manage_sites'))
 			wp_die(__('Cheatin&#8217; uh?'), 403);
 
-		$cat_ID = Blog_Cats::add($_POST['blog-cat-name']);
+
+		$cat_name = $_POST['blog-cat-name'];
+		$cat_ID = false;
+
+		if(!empty($cat_name)) {
+			$cat_ID = Blog_Cats::add( $cat_name );
+		}
 
 		$location = 'admin.php?page='.$_REQUEST['page'];
 
@@ -58,8 +64,8 @@ switch ( $cat_list->current_action() ) {
 		if (!current_user_can('manage_sites'))
 			wp_die(__('Cheatin&#8217; uh?'), 403);
 
-		$tags = (array) $_REQUEST['delete_cats'];
-		foreach ( $tags as $cat_ID ) {
+		$cats = (array) $_REQUEST['delete_cats'];
+		foreach ( $cats as $cat_ID ) {
 			Blog_Cats::delete( $cat_ID );
 		}
 
@@ -76,8 +82,11 @@ switch ( $cat_list->current_action() ) {
 		$cat_ID = (int) $_REQUEST['cat_id'];
 
 		$cat = Blog_Cats::get( $cat_ID );
+
 		if ( ! $cat )
 			wp_die( __( 'You attempted to edit an item that doesn&#8217;t exist. Perhaps it was deleted?' ) );
+
+		$blogs = Blog_Cat_Relationships::get_blog_list($cat_ID);
 
 		break;
 
@@ -96,9 +105,16 @@ switch ( $cat_list->current_action() ) {
 
 		$ret = Blog_Cats::update($cat_ID, $_POST['blog-cat-name']);
 
+		Blog_Cat_Relationships::delete_all($cat_ID);
+
+		$blogs = $_POST['blog-cat-blogs'];
+		foreach($blogs as $blog_ID) {
+			Blog_Cat_Relationships::add($cat_ID, $blog_ID);
+		}
+
 		$location = 'admin.php?page='.$_REQUEST['page'];
 
-		if ( $ret && !is_wp_error( $ret ) )
+		if ( !is_wp_error( $ret ) )
 			$location = add_query_arg( 'message', 3, $location );
 		else
 			$location = add_query_arg( 'message', 5, $location );
@@ -181,7 +197,7 @@ $sites = wp_get_sites(array(
 								<tr <?php if($i % 2 == 0) { ?>class="alternate"<?php } ?>>
 									<td>
 										<label>
-											<input type="checkbox" name="blog-cat-blogs[]"/>
+											<input type="checkbox" name="blog-cat-blogs[]" value="<?php echo $site['blog_id'] ?>" <?php if(!empty($blogs) && in_array((int)$site['blog_id'], $blogs)) { ?>checked="checked"<?php } ?>/>
 											<?php echo get_blog_option($site['blog_id'], 'blogname'); ?>
 										</label>
 									</td>
