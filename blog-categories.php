@@ -2,7 +2,7 @@
 
 /**
  * Plugin Name: Blog Categories
- * Plugin URI:
+ * Plugin URI: https://github.com/menmo/wp-blog-categories
  * Description: A plugin for categorizing blogs.
  * Version: 1.0
  * Author: Menmo AB
@@ -10,258 +10,47 @@
  * License: GPL2
  */
 
+require_once(plugin_dir_path(__FILE__) . 'db/blog-cats.php');
+require_once(plugin_dir_path(__FILE__) . 'db/blog-cat-relationships.php');
 require_once(plugin_dir_path(__FILE__) . 'blog-cat-list.php');
 
 define("br", "<br />");
 
 class Blog_Categories_Plugin {
 
-    private $cat_table_name;
-    private $cat_relations_table_name;
-
     function __construct() {
 
         defined('ABSPATH') or die();
-
-        global $wpdb;
-
-        $this->cat_table_name = $wpdb->base_prefix . "blog_cats";
-        $this->cat_relations_table_name = $wpdb->base_prefix . "blog_cat_relationsships";
 
         register_activation_hook( __FILE__, array($this, 'activate') );
 
         add_action('network_admin_menu', array($this, 'add_menu') );
         add_action('wpmu_new_blog', array($this, 'new_blog') );
         add_action('admin_menu', array($this, 'add_options_page') );
-
     }
 
     public function activate(){
-
         $this->die_if_not_superadmin();
-
-        global $wpdb;
-
-        $charset_collate = '';
-
-        if ( ! empty($wpdb->charset) )
-            $charset_collate = "DEFAULT CHARACTER SET $wpdb->charset";
-        if ( ! empty($wpdb->collate) )
-            $charset_collate .= " COLLATE $wpdb->collate";
-
-        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-
-        $sql = "CREATE TABLE IF NOT EXISTS {$this->cat_table_name} (
-                cat_id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-                cat_name varchar(200) DEFAULT NULL,
-                UNIQUE KEY cat_id (cat_id)
-                )$charset_collate;";
-
-
-        dbDelta($sql);
-
-        $sql = "CREATE TABLE IF NOT EXISTS {$this->cat_relations_table_name} (
-                relationship_id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-                cat_id bigint(20) unsigned NOT NULL,
-                blog_id bigint(20) unsigned NOT NULL,
-                UNIQUE KEY relationship_id (relationship_id)
-                )$charset_collate;";
-
-        dbDelta($sql);
+	    Blog_Cats::create_table();
+	    Blog_Cat_Relationships::create_table();
     }
 
     public function add_menu() {
         $page_title = __('Categories');
         $menu_title = __('Categories');
         $capability = 'manage_sites';
-        $menu_slug = 'blog-cats-menu';
-        $function = array($this, 'blog_cats_list');
+        $menu_slug = 'blog-cats';
+        $function = array($this, 'blog_cats_page');
         add_menu_page( $page_title, $menu_title, $capability, $menu_slug, $function, 'dashicons-category' );
     }
 
-    public function blog_cats_list() {
+	/**
+	 * Show the main page for managing blog categories
+	 */
+    public function blog_cats_page() {
         $this->die_if_not_superadmin();
-
-        add_screen_option( 'per_page', array( 'label' => __('Count'), 'default' => 20, 'option' => 'edit_blog_cats_per_page' ) );
-
-        $location = false;
-        $title = __('Add New Category');
-
-        $cat_list = new Blog_Cat_List_Table(array(
-            'cat_table' => $this->cat_table_name,
-            'cat_relations_table' => $this->cat_relations_table_name
-        ));
-
-        switch ( $cat_list->current_action() ) {
-
-            case 'add':
-
-                check_admin_referer('blog-cat', '_wpnonce_blog-cat');
-
-                if (!current_user_can('manage_sites'))
-                    wp_die(__('Cheatin&#8217; uh?'), 403);
-
-                $ret = $this->add_blog_cat($_POST['blog-cat-name']);
-
-                $location = 'admin.php?page='.$_REQUEST['page'];
-
-                if ($ret && !is_wp_error($ret))
-                    $location = add_query_arg('message', 1, $location);
-                else
-                    $location = add_query_arg('message', 4, $location);
-
-                break;
-
-            case 'delete':
-
-                if (!current_user_can('manage_sites'))
-                    wp_die(__('Cheatin&#8217; uh?'), 403);
-
-                if ( ! isset( $_REQUEST['cat_id'] ) ) {
-                    break;
-                }
-
-                $this->delete_blog_cat( $_REQUEST['cat_id'] );
-
-                $location = 'admin.php?page='.$_REQUEST['page'];
-
-                $location = add_query_arg( 'message', 2, $location );
-
-                break;
-
-            case 'bulk-delete':
-
-                check_admin_referer('bulk-blog-cat', '_wpnonce_bulk-blog-cat');
-
-                if (!current_user_can('manage_sites'))
-                    wp_die(__('Cheatin&#8217; uh?'), 403);
-
-                $tags = (array) $_REQUEST['delete_cats'];
-                foreach ( $tags as $cat_ID ) {
-                    $this->delete_blog_cat( $cat_ID );
-                }
-
-                $location = 'admin.php?page='.$_REQUEST['page'];
-
-                $location = add_query_arg( 'message', 6, $location );
-
-                break;
-
-            case 'edit':
-
-                $title = __('Edit category');
-
-                $cat_ID = (int) $_REQUEST['cat_id'];
-
-                $cat = $this->get_blog_cat( $cat_ID );
-                if ( ! $cat )
-                    wp_die( __( 'You attempted to edit an item that doesn&#8217;t exist. Perhaps it was deleted?' ) );
-
-                break;
-
-            case 'edited':
-
-                check_admin_referer('blog-cat', '_wpnonce_blog-cat');
-
-                if (!current_user_can('manage_sites'))
-                    wp_die(__('Cheatin&#8217; uh?'), 403);
-
-                $cat_ID = (int) $_POST['cat_id'];
-
-                $cat = $this->get_blog_cat( $cat_ID );
-                if ( ! $cat )
-                    wp_die( __( 'You attempted to edit an item that doesn&#8217;t exist. Perhaps it was deleted?' ) );
-
-                $ret = $this->update_blog_cat($cat_ID, $_POST['blog-cat-name']);
-
-                $location = 'admin.php?page='.$_REQUEST['page'];
-
-                if ( $ret && !is_wp_error( $ret ) )
-                    $location = add_query_arg( 'message', 3, $location );
-                else
-                    $location = add_query_arg( 'message', 5, $location );
-                break;
-        }
-
-        if ( ! $location && ! empty( $_REQUEST['_wp_http_referer'] ) ) {
-            $location = remove_query_arg( array('_wp_http_referer', '_wpnonce'), wp_unslash($_SERVER['REQUEST_URI']) );
-        }
-
-        if ( $location ) {
-            if ( ! empty( $_REQUEST['paged'] ) ) {
-                $location = add_query_arg( 'paged', (int) $_REQUEST['paged'], $location );
-            }
-            wp_redirect( $location );
-            exit;
-        }
-
-        $messages = array(
-            0 => '', // Unused. Messages start at index 1.
-            1 => __( 'Category added.' ),
-            2 => __( 'Category deleted.' ),
-            3 => __( 'Category updated.' ),
-            4 => __( 'Category not added.' ),
-            5 => __( 'Category not updated.' ),
-            6 => __( 'Categories deleted.' )
-        );
-
-        $message = false;
-        if ( isset( $_REQUEST['message'] ) && ( $msg = (int) $_REQUEST['message'] ) ) {
-            if ( isset( $messages[ $msg ] ) )
-                $message = $messages[ $msg ];
-        }
-
-        if ( $message ) : ?>
-            <div id="message" class="updated"><p><?php echo $message; ?></p></div>
-            <?php $_SERVER['REQUEST_URI'] = remove_query_arg(array('message'), $_SERVER['REQUEST_URI']);
-        endif;
-
-        $cat_list->prepare_items();
-
-                ?>
-
-        <div class="wrap">
-            <h2><?php _e('Blog categories') ?></h2>
-
-            <div id="col-container">
-
-                <div id="col-right">
-                    <div class="col-wrap">
-                        <form id="blog-cat-bulk-actions" method="get">
-                            <?php wp_nonce_field('bulk-blog-cat', '_wpnonce_bulk-blog-cat'); ?>
-                            <input type="hidden" name="page" value="<?php echo $_REQUEST['page'] ?>" />
-                            <?php $cat_list->display(); ?>
-                        </form>
-
-                        <br class="clear" />
-                    </div>
-                </div><!-- /col-right -->
-
-                <div id="col-left">
-                    <div class="col-wrap">
-                        <div class="form-wrap">
-                            <h3><?php echo $title ?></h3>
-                            <form id="blog-cat" method="post" action="" class="validate">
-                                <input type="hidden" name="action" value="<?php echo $cat ? 'edited' : 'add' ?>" />
-                                <input type="hidden" name="cat_id" value="<?php echo $cat ? $cat->cat_id : '' ?>" />
-                                <?php wp_nonce_field('blog-cat', '_wpnonce_blog-cat'); ?>
-                                <div class="form-field form-required term-name-wrap">
-                                    <label for="blog-cat-name"><?php _ex( 'Name', 'term name' ); ?></label>
-                                    <input name="blog-cat-name" id="blog-cat-name" type="text" value="<?php echo $cat ? $cat->cat_name : '' ?>" size="40" aria-required="true" />
-                                </div>
-
-                                <?php submit_button( $cat ? __('Update') : __('Add New Category') ); ?>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-        </div>
-    <?php
-
+	    include(plugin_dir_path(__FILE__) . 'pages/blog-cats.php');
     }
-
 
     /**
      *
@@ -329,29 +118,7 @@ class Blog_Categories_Plugin {
      *    Functions for updating categories and blogs.
      *
      **/
-    private function add_blog_cat($name) {
-        global $wpdb;
-        $query = $wpdb->prepare("INSERT INTO {$this->cat_table_name} (cat_name) VALUES ( %s )", $name);
-        return $wpdb->query( $query );
-    }
 
-    private function delete_blog_cat($cat_ID) {
-        global $wpdb;
-        $sql = "DELETE FROM {$this->cat_table_name} WHERE cat_id = $cat_ID";
-        return $wpdb->query( $sql );
-    }
-
-    private function get_blog_cat($cat_ID) {
-        global $wpdb;
-        $sql = "SELECT * FROM {$this->cat_table_name} WHERE cat_id = $cat_ID";
-        return $wpdb->get_row( $sql );
-    }
-
-    private function update_blog_cat($cat_ID, $name) {
-        global $wpdb;
-        $query = $wpdb->prepare("UPDATE {$this->cat_table_name} SET cat_name = %s WHERE cat_id = %d", $name, $cat_ID);
-        return $wpdb->query( $query );
-    }
 
     function update_blogs() {
         global $wpdb;

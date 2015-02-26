@@ -1,5 +1,6 @@
 <?php
 
+
 if( ! class_exists( 'WP_List_Table' ) ) {
     require_once( ABSPATH . 'wp-admin/includes/class-wp-list-table.php' );
 }
@@ -34,53 +35,46 @@ class Blog_Cat_List_Table extends WP_List_Table {
     public function get_sortable_columns() {
         return $sortable = array(
             'cat_name' => array('cat_name', false),
-            'cat_id' => array('cat_id', false),
-            'blog_count' => array('blog_count', false)
+            'cat_id' => array('cat_id', true),
+            'blog_count' => array('blog_count', true)
         );
     }
 
     function prepare_items() {
-        global $wpdb;
 
-        $total_items = $wpdb->get_var("SELECT COUNT(*) FROM {$this->cat_table_name}");
+        $total_items = Blog_Cats::count();
+	    $list_args = array(
+		    'limit' => 20
+	    );
 
         /* -- Ordering parameters -- */
         //Parameters that are going to be used to order the result
         $sortable_columns = $this->get_sortable_columns();
-        $order_by = 'cat_id';
         if(isset($_GET["orderby"]) && isset($sortable_columns[$_GET["orderby"]])) {
-            $order_by = $_GET["orderby"];
+            $list_args['order_by'] = $_GET["orderby"];
         }
 
-        $order = isset($_GET["order"]) && $_GET["order"] == 'desc' ? 'desc' : 'asc';
+        if(isset($_GET["order"])) {
+	        $list_args['order'] = $_GET["order"] == 'desc' ? 'desc' : 'asc';
+        };
 
         /* -- Pagination parameters -- */
-        //How many to display per page?
-        $per_page = 20;
-        $offset = 0;
-
         //Which page is this?
         $paged = !empty($_GET["paged"]) ? $_GET["paged"] : '';
         //Page Number
         if(empty($paged) || !is_numeric($paged) || $paged<=0 ){ $paged=1; }
         //How many pages do we have in total?
-        $total_pages = ceil($total_items/$per_page);
+        $total_pages = ceil($total_items/$list_args['limit']);
         //adjust the query to take pagination into account
         if(!empty($paged) && !empty($per_page)){
             $offset=($paged-1)*$per_page;
         }
 
-        /* -- Preparing your query -- */
-        $query = "SELECT `{$this->cat_table_name}`.`cat_id`, `{$this->cat_table_name}`.`cat_name`, COUNT(`{$this->cat_relations_table_name}`.`cat_id`) as blog_count
-                FROM {$this->cat_table_name}
-                LEFT JOIN {$this->cat_relations_table_name} ON `{$this->cat_table_name}`.`cat_id` = `{$this->cat_relations_table_name}`.`cat_id`
-                GROUP BY `{$this->cat_table_name}`.`cat_id`, `{$this->cat_table_name}`.`cat_name` ORDER BY $order_by $order LIMIT $offset,$per_page";
-
         /* -- Register the pagination -- */
         $this->set_pagination_args( array(
             "total_items" => $total_items,
             "total_pages" => $total_pages,
-            "per_page" => $per_page,
+            "per_page" => $list_args['limit'],
         ) );
         //The pagination links are automatically built according to those parameters
 
@@ -88,7 +82,7 @@ class Blog_Cat_List_Table extends WP_List_Table {
         $this->_column_headers = array($this->get_columns(), array(), $sortable_columns);
 
         /* -- Fetch the items -- */
-        $this->items = $wpdb->get_results($query);
+        $this->items = Blog_Cats::get_list($list_args);
     }
 
     function column_default( $item, $column_name ) {

@@ -1,0 +1,12 @@
+{
+    "name": "menmo/blog-categories",
+    "description": "A plugin for categorizing blogs.",
+    "keywords": ["wordpress", "plugin", "multisite", "categories"],
+    "type": "wordpress-plugin",
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/menmo/wp-blog-categories"
+        }
+    ]
+}
