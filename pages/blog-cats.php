@@ -3,16 +3,11 @@
  * Main page for managing blog categories
  */
 
-add_screen_option( 'per_page', array( 'label' => __('Count'), 'default' => 20, 'option' => 'edit_blog_cats_per_page' ) );
-
 $location = false; // Redirect
 $cat = false; // Current cat
 $subtitle = __('Add New Category');
 
-$cat_list = new Blog_Cat_List_Table(array(
-	'cat_table' => $this->cat_table_name,
-	'cat_relations_table' => $this->cat_relations_table_name
-));
+$cat_list = new Blog_Cat_List_Table();
 
 switch ( $cat_list->current_action() ) {
 
@@ -23,14 +18,19 @@ switch ( $cat_list->current_action() ) {
 		if (!current_user_can('manage_sites'))
 			wp_die(__('Cheatin&#8217; uh?'), 403);
 
-		$ret = Blog_Cats::add($_POST['blog-cat-name']);
+		$cat_ID = Blog_Cats::add($_POST['blog-cat-name']);
 
 		$location = 'admin.php?page='.$_REQUEST['page'];
 
-		if ($ret && !is_wp_error($ret))
+		if($cat_ID) {
+			$blogs = $_POST['blog-cat-blogs'];
+			foreach($blogs as $blog_ID) {
+				Blog_Cat_Relationships::add($cat_ID, $blog_ID);
+			}
 			$location = add_query_arg('message', 1, $location);
-		else
+		} else {
 			$location = add_query_arg('message', 4, $location);
+		}
 
 		break;
 
@@ -139,6 +139,10 @@ if ( $message ) : ?>
 endif;
 
 $cat_list->prepare_items();
+$sites = wp_get_sites(array(
+	'archived' => false,
+	'deleted' => false
+));
 
 ?>
 
@@ -171,6 +175,21 @@ $cat_list->prepare_items();
 							<label for="blog-cat-name"><?php _ex( 'Name', 'term name' ); ?></label>
 							<input name="blog-cat-name" id="blog-cat-name" type="text" value="<?php echo $cat ? $cat->cat_name : '' ?>" size="40" aria-required="true" />
 						</div>
+						<h4><?php _e( 'Sites'); ?></h4>
+						<table class="widefat">
+							<?php foreach($sites as $i => $site) { ?>
+								<tr <?php if($i % 2 == 0) { ?>class="alternate"<?php } ?>>
+									<td>
+										<label>
+											<input type="checkbox" name="blog-cat-blogs[]"/>
+											<?php echo get_blog_option($site['blog_id'], 'blogname'); ?>
+										</label>
+									</td>
+								</tr>
+							<?php } ?>
+						</table>
+
+						<br class="clear"/>
 
 						<?php submit_button( $cat ? __('Update') : __('Add New Category') ); ?>
 					</form>

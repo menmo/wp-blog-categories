@@ -21,7 +21,7 @@ class Blog_Cats {
 
 		require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
 
-		$sql = "CREATE TABLE IF NOT EXISTS {Blog_Cats::table_name()} (
+		$sql = "CREATE TABLE IF NOT EXISTS " . Blog_Cats::table_name() . " (
                 cat_id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
                 cat_name varchar(200) DEFAULT NULL,
                 UNIQUE KEY cat_id (cat_id)
@@ -33,7 +33,11 @@ class Blog_Cats {
 	public static function add($name) {
 		global $wpdb;
 		$query = $wpdb->prepare("INSERT INTO " . Blog_Cats::table_name() . " (cat_name) VALUES ( %s )", $name);
-		return $wpdb->query( $query );
+		$ret = $wpdb->query( $query );
+		if(!is_wp_error($ret)) {
+			return $wpdb->insert_id;
+		}
+		return false;
 	}
 
 	public static function delete($cat_ID) {

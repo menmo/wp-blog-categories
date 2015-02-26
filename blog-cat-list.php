@@ -7,19 +7,13 @@ if( ! class_exists( 'WP_List_Table' ) ) {
 
 class Blog_Cat_List_Table extends WP_List_Table {
 
-    private $cat_table_name;
-    private $cat_relations_table_name;
+    function __construct() {
 
-    function __construct($args) {
-
-        $this->cat_table_name = $args['cat_table'];
-        $this->cat_relations_table_name = $args['cat_relations_table'];
-
-        parent::__construct( array_merge($args, array(
+        parent::__construct( array(
             'singular'=> 'wp_list_blog_category', //Singular label
             'plural' => 'wp_list_blog_categories', //plural label, also this well be one of the table css class
             'ajax'   => false //We won't support Ajax for this table
-        )) );
+        ));
     }
 
     function get_columns(){
