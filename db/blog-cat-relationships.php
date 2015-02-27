@@ -41,15 +41,22 @@ class Blog_Cat_Relationships_DB {
 		return false;
 	}
 
-	public static function delete_all($cat_ID) {
+	public static function delete_all($id, $type = 'cat') {
 		global $wpdb;
-		$query = $wpdb->prepare("DELETE FROM " . Blog_Cat_Relationships_DB::table_name() . " WHERE cat_id = %d", $cat_ID);
+		$query = $wpdb->prepare("DELETE FROM " . Blog_Cat_Relationships_DB::table_name() . " WHERE " . $type . "_id = %d", $id);
 		return $wpdb->query($query);
 	}
 
 	public static function get_blog_list( $cat_ID ) {
 		global $wpdb;
 		$query = $wpdb->prepare("SELECT blog_id FROM  " . Blog_Cat_Relationships_DB::table_name() . " WHERE cat_id = %d", $cat_ID);
+		return $wpdb->get_col($query);
+	}
+
+	public static function get_cat_list($blog_ID)
+	{
+		global $wpdb;
+		$query = $wpdb->prepare("SELECT cat_id FROM  " . Blog_Cat_Relationships_DB::table_name() . " WHERE blog_id = %d", $blog_ID);
 		return $wpdb->get_col($query);
 	}
 

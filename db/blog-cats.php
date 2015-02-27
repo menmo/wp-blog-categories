@@ -63,7 +63,7 @@ class Blog_Cats_DB {
 		return $wpdb->get_var("SELECT COUNT(*) FROM " . Blog_Cats_DB::table_name());
 	}
 
-	public static function get_list($args) {
+	public static function get_list($args = array()) {
 		$args = array_merge(array(
 			'order_by' => 'cat_id',
 			'order' => 'ASC',

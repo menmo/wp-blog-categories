@@ -49,7 +49,7 @@ class Blog_Categories_Plugin {
 	 */
     public function blog_cats_page() {
         $this->die_if_not_superadmin();
-	    include(plugin_dir_path(__FILE__) . 'pages/blog-cats.php');
+	    include(plugin_dir_path(__FILE__) . 'pages/manage-blog-cats.php');
     }
 
     /**
@@ -72,14 +72,14 @@ class Blog_Categories_Plugin {
         $page_title = __('Blog Categories');
         $menu_title = __('Categories');
         $capability = 'manage_sites';
-        $menu_slug = 'blog-cats-options';
-        $function = array($this, 'blog_options_page');
+        $menu_slug = 'blog-cats-select';
+        $function = array($this, 'manage_blog_cats_page');
         add_options_page( $page_title, $menu_title, $capability, $menu_slug, $function);
     }
 
-    public function blog_options_page() {
+    public function manage_blog_cats_page() {
         $this->die_if_not_superadmin();
-        include(plugin_dir_path(__FILE__) . 'pages/blog-options.php');
+        include(plugin_dir_path(__FILE__) . 'pages/manage-blog.php');
     }
 
     /*
