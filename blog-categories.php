@@ -31,8 +31,8 @@ class Blog_Categories_Plugin {
 
     public function activate(){
         $this->die_if_not_superadmin();
-	    Blog_Cats::create_table();
-	    Blog_Cat_Relationships::create_table();
+	    Blog_Cats_DB::create_table();
+	    Blog_Cat_Relationships_DB::create_table();
     }
 
     public function add_menu() {
@@ -64,17 +64,22 @@ class Blog_Categories_Plugin {
 
     /**
      *
-     *   Add categorize option page
+     *   Add categorize option page for each blog
      *
      **/
 
     function add_options_page() {
-        $page_title = 'Kategorisera blogg';
-        $menu_title = 'Kategorisera blogg';
+        $page_title = __('Blog Categories');
+        $menu_title = __('Categories');
         $capability = 'manage_sites';
         $menu_slug = 'blog-cats-options';
-        $function = array($this, 'add_options_page_callback');
+        $function = array($this, 'blog_options_page');
         add_options_page( $page_title, $menu_title, $capability, $menu_slug, $function);
+    }
+
+    public function blog_options_page() {
+        $this->die_if_not_superadmin();
+        include(plugin_dir_path(__FILE__) . 'pages/blog-options.php');
     }
 
     /*

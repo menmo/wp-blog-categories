@@ -36,7 +36,7 @@ class Blog_Cat_List_Table extends WP_List_Table {
 
     function prepare_items() {
 
-        $total_items = Blog_Cats::count();
+        $total_items = Blog_Cats_DB::count();
 	    $list_args = array(
 		    'limit' => 20
 	    );
@@ -76,7 +76,7 @@ class Blog_Cat_List_Table extends WP_List_Table {
         $this->_column_headers = array($this->get_columns(), array(), $sortable_columns);
 
         /* -- Fetch the items -- */
-        $this->items = Blog_Cats::get_list($list_args);
+        $this->items = Blog_Cats_DB::get_list($list_args);
     }
 
     function column_default( $item, $column_name ) {

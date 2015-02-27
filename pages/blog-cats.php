@@ -23,7 +23,7 @@ switch ( $cat_list->current_action() ) {
 		$cat_ID = false;
 
 		if(!empty($cat_name)) {
-			$cat_ID = Blog_Cats::add( $cat_name );
+			$cat_ID = Blog_Cats_DB::add( $cat_name );
 		}
 
 		$location = 'admin.php?page='.$_REQUEST['page'];
@@ -31,7 +31,7 @@ switch ( $cat_list->current_action() ) {
 		if($cat_ID) {
 			$blogs = $_POST['blog-cat-blogs'];
 			foreach($blogs as $blog_ID) {
-				Blog_Cat_Relationships::add($cat_ID, $blog_ID);
+				Blog_Cat_Relationships_DB::add($cat_ID, $blog_ID);
 			}
 			$location = add_query_arg('message', 1, $location);
 		} else {
@@ -49,7 +49,7 @@ switch ( $cat_list->current_action() ) {
 			break;
 		}
 
-		Blog_Cats::delete( $_REQUEST['cat_id'] );
+		Blog_Cats_DB::delete( $_REQUEST['cat_id'] );
 
 		$location = 'admin.php?page='.$_REQUEST['page'];
 
@@ -66,7 +66,7 @@ switch ( $cat_list->current_action() ) {
 
 		$cats = (array) $_REQUEST['delete_cats'];
 		foreach ( $cats as $cat_ID ) {
-			Blog_Cats::delete( $cat_ID );
+			Blog_Cats_DB::delete( $cat_ID );
 		}
 
 		$location = 'admin.php?page='.$_REQUEST['page'];
@@ -81,12 +81,12 @@ switch ( $cat_list->current_action() ) {
 
 		$cat_ID = (int) $_REQUEST['cat_id'];
 
-		$cat = Blog_Cats::get( $cat_ID );
+		$cat = Blog_Cats_DB::get( $cat_ID );
 
 		if ( ! $cat )
 			wp_die( __( 'You attempted to edit an item that doesn&#8217;t exist. Perhaps it was deleted?' ) );
 
-		$blogs = Blog_Cat_Relationships::get_blog_list($cat_ID);
+		$blogs = Blog_Cat_Relationships_DB::get_blog_list($cat_ID);
 
 		break;
 
@@ -99,17 +99,17 @@ switch ( $cat_list->current_action() ) {
 
 		$cat_ID = (int) $_POST['cat_id'];
 
-		$cat = Blog_Cats::get( $cat_ID );
+		$cat = Blog_Cats_DB::get( $cat_ID );
 		if ( ! $cat )
 			wp_die( __( 'You attempted to edit an item that doesn&#8217;t exist. Perhaps it was deleted?' ) );
 
-		$ret = Blog_Cats::update($cat_ID, $_POST['blog-cat-name']);
+		$ret = Blog_Cats_DB::update($cat_ID, $_POST['blog-cat-name']);
 
-		Blog_Cat_Relationships::delete_all($cat_ID);
+		Blog_Cat_Relationships_DB::delete_all($cat_ID);
 
 		$blogs = $_POST['blog-cat-blogs'];
 		foreach($blogs as $blog_ID) {
-			Blog_Cat_Relationships::add($cat_ID, $blog_ID);
+			Blog_Cat_Relationships_DB::add($cat_ID, $blog_ID);
 		}
 
 		$location = 'admin.php?page='.$_REQUEST['page'];
