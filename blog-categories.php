@@ -44,29 +44,14 @@ class Blog_Categories_Plugin {
         add_menu_page( $page_title, $menu_title, $capability, $menu_slug, $function, 'dashicons-category' );
     }
 
-	/**
-	 * Show the main page for managing blog categories
-	 */
     public function blog_cats_page() {
         $this->die_if_not_superadmin();
 	    include(plugin_dir_path(__FILE__) . 'pages/manage-blog-cats.php');
     }
 
-    /**
-     *
-     *   Redirect to settings page after site creation
-     *
-     **/
-
-    function new_blog_categories() {
-        exit( wp_redirect( admin_url( 'network/index.php?page=rlcb-blog-tags-submenu' ) ) );
+    function new_blog() {
+        exit( wp_redirect( admin_url( 'network/index.php?page=blog-cats' ) ) );
     }
-
-    /**
-     *
-     *   Add categorize option page for each blog
-     *
-     **/
 
     function add_options_page() {
         $page_title = __('Blog Categories');
@@ -82,20 +67,19 @@ class Blog_Categories_Plugin {
         include(plugin_dir_path(__FILE__) . 'pages/manage-blog.php');
     }
 
-    /*
-    *
-    *   Helper functions
-    *
-    */
-
     function die_if_not_superadmin() {
-        if( is_super_admin() == false ) {
+        if( !is_super_admin() ) {
             wp_die( __('You do not have permission to access this page.') );
         }
     }
-
-
 }
 
 new Blog_Categories_Plugin();
+
+// Public methods
+
+function blog_categories_get_categories($args = array()) {
+    return Blog_Cats_DB::get_list($args);
+}
+
 ?>
