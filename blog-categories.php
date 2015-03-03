@@ -84,18 +84,31 @@ function blog_categories_get_categories($args = array()) {
 
 function blog_categories_get_latest_posts($cat_ID) {
     $blogs = Blog_Cat_Relationships_DB::get_blog_list($cat_ID);
-    $posts = array();
+    $result = array();
     foreach($blogs as $blog) {
         $details = get_blog_details($blog);
+
         if($details->archived == 0 && $details->deleted == 0) {
             switch_to_blog($blog);
             $posts = get_posts(array(
                 'posts_per_page'   => 1
             ));
+
+            if(!empty($posts)) {
+                $result[] = array(
+                    'blog' => $details,
+                    'post' => $posts[0]
+                );
+            }
             restore_current_blog();
         }
     };
-    return $posts;
+
+    usort($result, function($a, $b) {
+        return strcmp($b['post']->post_date,  $a['post']->post_date);
+    });
+
+    return $result;
 }
 
 ?>
