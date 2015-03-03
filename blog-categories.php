@@ -82,4 +82,20 @@ function blog_categories_get_categories($args = array()) {
     return Blog_Cats_DB::get_list($args);
 }
 
+function blog_categories_get_latest_posts($cat_ID) {
+    $blogs = Blog_Cat_Relationships_DB::get_blog_list($cat_ID);
+    $posts = array();
+    foreach($blogs as $blog) {
+        $details = get_blog_details($blog);
+        if($details->archived == 0 && $details->deleted == 0) {
+            switch_to_blog($blog);
+            $posts = get_posts(array(
+                'posts_per_page'   => 1
+            ));
+            restore_current_blog();
+        }
+    };
+    return $posts;
+}
+
 ?>
