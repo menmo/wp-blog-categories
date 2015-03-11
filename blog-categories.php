@@ -25,7 +25,7 @@ class Blog_Categories_Plugin {
         register_activation_hook( __FILE__, array($this, 'activate') );
 
         add_action('network_admin_menu', array($this, 'add_menu') );
-        add_action('wpmu_new_blog', array($this, 'new_blog') );
+        //add_action('wpmu_new_blog', array($this, 'new_blog') );
         add_action('admin_menu', array($this, 'add_options_page') );
     }
 
