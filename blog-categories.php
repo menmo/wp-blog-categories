@@ -97,7 +97,8 @@ function blog_categories_get_latest_posts($cat_ID) {
             if(!empty($posts)) {
                 $result[] = array(
                     'blog' => $details,
-                    'post' => $posts[0]
+                    'post' => $posts[0],
+                    'permalink' => get_permalink($posts[0]->ID)
                 );
             }
             restore_current_blog();
