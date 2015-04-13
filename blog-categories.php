@@ -82,7 +82,7 @@ function blog_categories_get_categories($args = array()) {
     return Blog_Cats_DB::get_list($args);
 }
 
-function blog_categories_get_latest_posts($cat_ID) {
+function blog_categories_get_latest_posts($cat_ID, $avatar_size = 48) {
     $blogs = Blog_Cat_Relationships_DB::get_blog_list($cat_ID);
     $result = array();
     foreach($blogs as $blog) {
@@ -98,7 +98,8 @@ function blog_categories_get_latest_posts($cat_ID) {
                 $result[] = array(
                     'blog' => $details,
                     'post' => $posts[0],
-                    'permalink' => get_permalink($posts[0]->ID)
+                    'permalink' => get_permalink($posts[0]->ID),
+                    'avatar' => get_avatar( $posts[0]->post_author, $avatar_size )
                 );
             }
             restore_current_blog();
