@@ -88,7 +88,7 @@ function blog_categories_get_latest_posts($cat_ID, $avatar_size = 48) {
     foreach($blogs as $blog) {
         $details = get_blog_details($blog);
 
-        if($details->archived == 0 && $details->deleted == 0) {
+        if($details && $details->archived == 0 && $details->deleted == 0) {
             switch_to_blog($blog);
             $posts = get_posts(array(
                 'posts_per_page'   => 1
