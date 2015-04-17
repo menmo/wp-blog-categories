@@ -86,6 +86,7 @@ function blog_categories_get_latest_posts($cat_ID, $avatar_size = 48) {
     $blogs = Blog_Cat_Relationships_DB::get_blog_list($cat_ID);
     $result = array();
     foreach($blogs as $blog) {
+        global $wpdb;
         $details = get_blog_details($blog);
 
         if($details->archived == 0 && $details->deleted == 0) {
@@ -93,13 +94,14 @@ function blog_categories_get_latest_posts($cat_ID, $avatar_size = 48) {
             $posts = get_posts(array(
                 'posts_per_page'   => 1
             ));
-
             if(!empty($posts)) {
+                $avatar_id = get_user_meta($posts[0]->post_author, $wpdb->get_blog_prefix().'user_avatar', true);
+
                 $result[] = array(
                     'blog' => $details,
                     'post' => $posts[0],
                     'permalink' => get_permalink($posts[0]->ID),
-                    'avatar' => get_avatar( $posts[0]->post_author, $avatar_size )
+                    'avatar' =>  wp_get_attachment_image_src( $avatar_id, $avatar_size )
                 );
             }
             restore_current_blog();
