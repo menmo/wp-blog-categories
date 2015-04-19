@@ -101,7 +101,8 @@ function blog_categories_get_latest_posts($cat_ID, $avatar_size = 48) {
                     'blog' => $details,
                     'post' => $posts[0],
                     'permalink' => get_permalink($posts[0]->ID),
-                    'avatar' =>  wp_get_attachment_image_src( $avatar_id, $avatar_size )
+                    'avatar' =>  wp_get_attachment_image_src( $avatar_id, $avatar_size ),
+                    'sponsored_logo' => of_get_option('sponsor-logo'),
                 );
             }
             restore_current_blog();
