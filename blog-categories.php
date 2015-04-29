@@ -101,6 +101,7 @@ function blog_categories_get_latest_posts($cat_ID, $avatar_size = 48) {
                     'blog' => $details,
                     'post' => $posts[0],
                     'permalink' => get_permalink($posts[0]->ID),
+                    'home_url' => esc_url( home_url( '/' ) ),
                     'avatar' =>  wp_get_attachment_image_src( $avatar_id, $avatar_size ),
                     'sponsored_logo' => of_get_option('sponsor-logo'),
                 );
