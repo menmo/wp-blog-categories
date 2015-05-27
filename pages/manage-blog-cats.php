@@ -156,6 +156,7 @@ endif;
 
 $cat_list->prepare_items();
 $sites = wp_get_sites(array(
+    'network_id' => null,
 	'archived' => false,
 	'deleted' => false
 ));
