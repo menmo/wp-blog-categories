@@ -31,6 +31,7 @@ class Blog_Cats_DB {
 		$ret = $wpdb->query( $query );
 		if(!is_wp_error($ret)) {
 			return $wpdb->insert_id;
+			wp_cache_delete('list', 'blog_cats');
 		}
 		return false;
 	}
@@ -38,6 +39,7 @@ class Blog_Cats_DB {
 	public static function delete($cat_ID) {
 		global $wpdb;
 		$sql = "DELETE FROM " . Blog_Cats_DB::table_name() . " WHERE cat_id = $cat_ID";
+		wp_cache_delete('list', 'blog_cats');
 		return $wpdb->query( $sql );
 	}
 
@@ -59,22 +61,28 @@ class Blog_Cats_DB {
 	}
 
 	public static function get_list($args = array()) {
-		$args = array_merge(array(
-			'order_by' => 'cat_id',
-			'order' => 'ASC',
-			'offset' => 0,
-			'limit' => 20
-		), $args);
+		if(! $list = wp_cache_get('list', 'blog_cats')) {
 
-		$cat_table_name = Blog_Cats_DB::table_name();
-		$cat_relationships_table_name = Blog_Cat_Relationships_DB::table_name();
 
-		$query = "SELECT `{$cat_table_name}`.`cat_id`, `{$cat_table_name}`.`cat_name`, COUNT(`{$cat_relationships_table_name}`.`cat_id`) as blog_count
+			$args = array_merge(array(
+					'order_by' => 'cat_id',
+					'order' => 'ASC',
+					'offset' => 0,
+					'limit' => 20
+			), $args);
+
+			$cat_table_name = Blog_Cats_DB::table_name();
+			$cat_relationships_table_name = Blog_Cat_Relationships_DB::table_name();
+
+			$query = "SELECT `{$cat_table_name}`.`cat_id`, `{$cat_table_name}`.`cat_name`, COUNT(`{$cat_relationships_table_name}`.`cat_id`) as blog_count
                 FROM {$cat_table_name}
                 LEFT JOIN {$cat_relationships_table_name} ON `{$cat_table_name}`.`cat_id` = `{$cat_relationships_table_name}`.`cat_id`
                 GROUP BY `{$cat_table_name}`.`cat_id`, `{$cat_table_name}`.`cat_name` ORDER BY {$args['order_by']} {$args['order']} LIMIT {$args['offset']},{$args['limit']}";
 
-		global $wpdb;
-		return $wpdb->get_results($query);
+			global $wpdb;
+		 	$list = $wpdb->get_results($query);
+			wp_cache_set('list', $list, 'blog_cats');
+		}
+		return $list;
 	}
 }
